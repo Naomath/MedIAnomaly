@@ -1,7 +1,7 @@
 num_repeat=1
 datasets="rsna vin brain lag isic c16 brats"
 methods="ae ae-l1 ae-ssim ae-perceptual ae-spatial vae constrained-ae memae ceae ganomaly aeu ae-grad vae-rec vae-combi"
-gpu=7
+gpu=0
 
 for data in $datasets;do
   for method in $methods;do
