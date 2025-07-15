@@ -1,6 +1,6 @@
 num_repeat=1
 data="rsna"
-methods="ae"
+method="ae"
 gpu=0
 
 python train.py -d "$data" -m "$method" -g $gpu -f "$i";
