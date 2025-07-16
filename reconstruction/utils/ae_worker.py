@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 from utils.base_worker import BaseWorker
 from utils.util import AverageMeter, compute_best_dice
 
+import csv
+
 
 class AEWorker(BaseWorker):
     def __init__(self, opt):
@@ -23,8 +25,8 @@ class AEWorker(BaseWorker):
         self.net.train()
         losses = AverageMeter()
 
-        latent_max = [0] * self.latent_size
-        latent_min = [1] * self.latent_size
+        latent_max = [float('-inf')] * self.opt.model['ls']
+        latent_min = [float('inf')] * self.opt.model['ls']
 
         for idx_batch, data_batch in enumerate(self.train_loader):
             img = data_batch['img']
@@ -32,13 +34,32 @@ class AEWorker(BaseWorker):
 
             net_out = self.net(img)
             z = net_out['z']
-            print(z.shape)
+            max_values, _ = torch.max(z, dim=0)
+            min_values, _ = torch.min(z, dim=0)
+
+            # for sensitivity calculation
+            for i in range(self.opt.model['ls']):
+                if max_values[i] > latent_max[i]:
+                    latent_max[i] = max_values[i].item()
+                if min_values[i] < latent_min[i]:
+                    latent_min[i] = min_values[i].item()    
+
             loss = self.criterion(img, net_out)
 
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
             losses.update(loss.item(), img.size(0))
+
+        save_path = os.path.join(self.opt.test['save_dir'], 'latent_range.csv')
+        os.makedirs(self.opt.test['save_dir'], exist_ok=True)
+
+        # save sensitivity
+        with open(save_path, 'w', newline='') as f:
+            writer = csv.writer(f)
+            for max_val, min_val in zip(latent_max, latent_min):
+                writer.writerow([max_val, min_val, abs(max_val - min_val)])
+
         return losses.avg
 
     def data_rept(self):

@@ -3,6 +3,8 @@ import torch.nn as nn
 from networks.base_units.conv_layers import down_conv, up_conv, conv3x3
 from networks.base_units.memory_module import MemModule
 
+import csv
+
 
 class BasicBlock(nn.Module):
     def __init__(self, inplanes, planes, num_layers, downsample=False, upsample=False, last_layer=False):
@@ -105,7 +107,8 @@ class ResBlock(nn.Module):
 
 
 class BottleNeck(nn.Module):
-    def __init__(self, in_planes, feature_size, mid_num=2048, latent_size=16, is_laplace=False, epsilon=1.0):
+    def __init__(self, in_planes, feature_size, mid_num=2048, latent_size=16, is_laplace=False
+    ,epsilon=1.0, sensitivity_path = None):
         super(BottleNeck, self).__init__()
         self.in_planes = in_planes
         self.feature_size = feature_size
@@ -123,12 +126,30 @@ class BottleNeck(nn.Module):
         
         self.is_laplace = is_laplace
         self.epsilon = epsilon
+        self.sensitivity_path = sensitivity_path
 
-    def laplace_noise(shape, epsilon, sensitivity=1.0):
-        scale = sensitivity / epsilon
-        U = torch.rand(shape) - 0.5  # 一様分布 [-0.5, 0.5]
-        noise = -scale * torch.sign(U) * torch.log1p(-2 * torch.abs(U))
-        return noise
+    def laplace_noise(self, z, epsilon, max_list, min_list, sensitivity_list):
+        B, latent_size = z.shape
+        device = z.device  # zのデバイスを取得
+        
+        # 一様分布 [-0.5, 0.5] の乱数（バッチサイズ×次元数）
+        U = torch.rand((B, latent_size), device=device) - 0.5
+        noise = torch.zeros_like(U)
+        
+        # 各次元ごとに異なるスケールでノイズを生成
+        for i in range(latent_size):
+            scale = sensitivity_list[i] / epsilon
+            u_i = U[:, i]
+            noise[:, i] = -scale * torch.sign(u_i) * torch.log1p(-2 * torch.abs(u_i))
+        
+        # ノイズを加える
+        z_noised = z + noise
+        
+        # 各次元ごとにクリップ
+        for i in range(latent_size):
+            z_noised[:, i] = torch.clamp(z_noised[:, i], min_list[i], max_list[i])
+        
+        return z_noised
 
     def forward(self, x):
         x = x.view(x.size(0), -1)
@@ -136,7 +157,21 @@ class BottleNeck(nn.Module):
         
         if self.is_laplace:
             # laplace mechanism
-            z = z + laplace_noise(z.shape, self.epsilon)
+            max_list = []
+            min_list = []
+            abs_list = []
+            with open(self.sensitivity_path, 'r') as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    max_val = float(row[0])
+                    min_val = float(row[1])
+                    abs_val = float(row[2])
+
+                    max_list.append(max_val)
+                    min_list.append(min_val)
+                    abs_list.append(abs_val)
+
+            z = self.laplace_noise(z,self.epsilon, max_list, min_list, abs_list)
 
         out = self.linear_dec(z)
 

@@ -4,7 +4,7 @@ from networks.base_units.blocks import BasicBlock, BottleNeck, SpatialBottleNeck
 
 class AE(nn.Module):
     def __init__(self, input_size=64, in_planes=1, base_width=16, expansion=1, mid_num=2048, latent_size=16,
-                 en_num_layers=1, de_num_layers=1, spatial=False):
+                 en_num_layers=1, de_num_layers=1, spatial=False, is_laplace=False, epsilon=1.0, sensitivity_path = None):
         super(AE, self).__init__()
 
         bottleneck = SpatialBottleNeck if spatial else BottleNeck
@@ -21,7 +21,7 @@ class AE(nn.Module):
                                     downsample=True)
 
         self.bottle_neck = bottleneck(4 * base_width * expansion, feature_size=self.fm, mid_num=mid_num,
-                                      latent_size=latent_size)
+                                      latent_size=latent_size, is_laplace=is_laplace ,epsilon=epsilon, sensitivity_path = sensitivity_path)
 
         self.de_block1 = BasicBlock(4 * base_width * expansion, 4 * base_width * expansion, de_num_layers,
                                     upsample=True)

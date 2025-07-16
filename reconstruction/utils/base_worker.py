@@ -53,10 +53,19 @@ class BaseWorker:
 
     def set_network_loss(self):
         if self.opt.model['name'] in ['ae', 'ceae', 'ae-ssim', 'ae-l1', 'ae-perceptual']:
-            self.net = AE(input_size=self.opt.model['input_size'], in_planes=self.opt.model['in_c'],
-                          base_width=self.opt.model['base_width'], expansion=self.opt.model['expansion'],
-                          mid_num=self.opt.model['hidden_num'], latent_size=self.opt.model['ls'],
-                          en_num_layers=self.opt.model["en_depth"], de_num_layers=self.opt.model["de_depth"])
+            if self.opt.dp['laplace']:
+                # add laplace mechanism
+                self.net = AE(input_size=self.opt.model['input_size'], in_planes=self.opt.model['in_c'],
+                            base_width=self.opt.model['base_width'], expansion=self.opt.model['expansion'],
+                            mid_num=self.opt.model['hidden_num'], latent_size=self.opt.model['ls'],
+                            en_num_layers=self.opt.model["en_depth"], de_num_layers=self.opt.model["de_depth"], 
+                            is_laplace=True, epsilon=self.opt.dp['epsilon'], sensitivity_path=self.opt.dp['sensitivity_path'])
+            else:
+                self.net = AE(input_size=self.opt.model['input_size'], in_planes=self.opt.model['in_c'],
+                            base_width=self.opt.model['base_width'], expansion=self.opt.model['expansion'],
+                            mid_num=self.opt.model['hidden_num'], latent_size=self.opt.model['ls'],
+                            en_num_layers=self.opt.model["en_depth"], de_num_layers=self.opt.model["de_depth"])
+
             if self.opt.model['name'] == 'ae-ssim':
                 self.criterion = SSIMLoss()
             elif self.opt.model['name'] == 'ae-l1':

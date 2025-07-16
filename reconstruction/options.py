@@ -62,6 +62,9 @@ class Options:
 
         # differential privact
         parser.add_argument('-e', '--epsilon', type=float, default=1.0, help='privacy budget for DP')
+        parser.add_argument('--sensitivity-path', type=str, default=None, help='path to sensitivity csv file')
+        parser.add_argument('--laplace', action='store_true',
+                    help='If specified, apply Laplace mechanism in latent space')
 
         args = parser.parse_args()
 
@@ -103,6 +106,8 @@ class Options:
 
         # --- Differential Privacy --- #
         self.dp['epsilon'] = args.epsilon
+        self.dp['sensitivity_path'] = args.sensitivity_path
+        self.dp['laplace'] = args.laplace
 
     def save_options(self):
         if not os.path.exists(self.train['save_dir']):
