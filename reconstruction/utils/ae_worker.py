@@ -22,12 +22,17 @@ class AEWorker(BaseWorker):
     def train_epoch(self):
         self.net.train()
         losses = AverageMeter()
+
+        latent_max = [0] * self.latent_size
+        latent_min = [1] * self.latent_size
+
         for idx_batch, data_batch in enumerate(self.train_loader):
             img = data_batch['img']
             img = img.cuda()
 
             net_out = self.net(img)
-
+            z = net_out['z']
+            print(z.shape)
             loss = self.criterion(img, net_out)
 
             self.optimizer.zero_grad()

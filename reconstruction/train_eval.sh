@@ -16,3 +16,5 @@ for data in $datasets;do
       python test.py -d "$data" -m dae -g $gpu --input-size 128 -f "$i" -save;
   done
 done
+
+// in the second loop, only 'dae' is trained.
