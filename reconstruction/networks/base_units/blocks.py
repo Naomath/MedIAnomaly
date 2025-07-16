@@ -105,7 +105,7 @@ class ResBlock(nn.Module):
 
 
 class BottleNeck(nn.Module):
-    def __init__(self, in_planes, feature_size, mid_num=2048, latent_size=16):
+    def __init__(self, in_planes, feature_size, mid_num=2048, latent_size=16, is_laplace=False, epsilon=1.0):
         super(BottleNeck, self).__init__()
         self.in_planes = in_planes
         self.feature_size = feature_size
@@ -120,10 +120,24 @@ class BottleNeck(nn.Module):
             nn.BatchNorm1d(mid_num),
             nn.ReLU(True),
             nn.Linear(mid_num, in_planes * feature_size * feature_size))
+        
+        self.is_laplace = is_laplace
+        self.epsilon = epsilon
+
+    def laplace_noise(shape, epsilon, sensitivity=1.0):
+        scale = sensitivity / epsilon
+        U = torch.rand(shape) - 0.5  # 一様分布 [-0.5, 0.5]
+        noise = -scale * torch.sign(U) * torch.log1p(-2 * torch.abs(U))
+        return noise
 
     def forward(self, x):
         x = x.view(x.size(0), -1)
         z = self.linear_enc(x)
+        
+        if self.is_laplace:
+            # laplace mechanism
+            z = z + laplace_noise(z.shape, self.epsilon)
+
         out = self.linear_dec(z)
 
         out = out.view(x.size(0), self.in_planes, self.feature_size, self.feature_size)

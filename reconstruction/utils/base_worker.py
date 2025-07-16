@@ -272,7 +272,7 @@ class BaseWorker:
         torch.save(self.net.state_dict(), os.path.join(self.opt.train['save_dir'], "checkpoints", "model.pt"))
 
     def load_checkpoint(self):
-        model_path = os.path.join(self.opt.train['save_dir'], "checkpoints", "model.pt")
+        model_path = self.opt.test['model_path']
         self.net.load_state_dict(torch.load(model_path, map_location=torch.device("cuda:{}".format(self.opt.gpu))))
         print("=> Load model from {}".format(model_path))
 
@@ -283,6 +283,6 @@ class BaseWorker:
             for key, value in results.items():
                 f.write(str(key) + ": " + str(value) + "\n")
                 print(key + ": {:.4f}".format(value))
-
+    
     def evaluate(self) -> dict:
         pass

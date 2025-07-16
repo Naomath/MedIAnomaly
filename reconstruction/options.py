@@ -1,6 +1,6 @@
 import os
 import argparse
-
+from datetime import datetime
 
 class Options:
     def __init__(self, isTrain):
@@ -17,6 +17,7 @@ class Options:
         self.gpu = None
         # self.tags = None
         # self.notes = None
+        self.dp = dict()
 
         self.data_name = {'rsna': 'RSNA', 'vin': 'VinDr-CXR', 'brain': 'Brain Tumor', 'lag': 'LAG', 'isic': 'ISIC2018',
                           'c16': 'Camelyon16', 'brats': 'BraTS2021'}
@@ -59,13 +60,17 @@ class Options:
         parser.add_argument("-save", '--test-save-flag', action='store_true')
         parser.add_argument('--test-model-path', type=str, default=None, help='model path to test')
 
+        # differential privact
+        parser.add_argument('-e', '--epsilon', type=float, default=1.0, help='privacy budget for DP')
+
         args = parser.parse_args()
 
         self.gpu = args.gpu
         self.dataset = args.dataset
         self.project_name = args.project_name
         self.fold = args.fold
-        self.result_dir = os.path.expanduser("~") + f'/Experiment/MedIAnomaly/{self.dataset}'
+        now_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        self.result_dir = os.path.expanduser("~") + f'/thesis/Experiment/MedIAnomaly/{self.dataset + now_str}'
 
         self.model['name'] = args.model_name
         self.model['in_c'] = self.in_c.setdefault(self.dataset, 1)
@@ -93,6 +98,11 @@ class Options:
         self.test['save_dir'] = '{:s}/test_results'.format(self.train['save_dir'])
         if not args.test_model_path:
             self.test['model_path'] = '{:s}/checkpoints/model.pth'.format(self.train['save_dir'])
+        else:
+            self.test['model_path'] = args.test_model_path
+
+        # --- Differential Privacy --- #
+        self.dp['epsilon'] = args.epsilon
 
     def save_options(self):
         if not os.path.exists(self.train['save_dir']):
